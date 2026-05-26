@@ -1,14 +1,14 @@
-﻿name: Build and Push to ECR
+﻿name: Build, Push and Deploy to Elastic Beanstalk
 
 on:
   push:
     branches: [ main ]
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  BACKEND_REPO: ${{ secrets.ECR_REPOSITORY_BACKEND }}
-  FRONTEND_REPO: ${{ secrets.ECR_REPOSITORY_FRONTEND }}
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: 355947669793
+  BACKEND_REPO: educloud-backend
+  FRONTEND_REPO: educloud-frontend
 
 jobs:
   build-and-push:
@@ -39,3 +39,76 @@ jobs:
         run: |
           docker build -t ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.FRONTEND_REPO }}:latest .
           docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.FRONTEND_REPO }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create Dockerrun.aws.json
+        run: |
+          cat > Dockerrun.aws.json <<EOF
+          {
+            "AWSEBDockerrunVersion": "1",
+            "Image": {
+              "Name": "${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.BACKEND_REPO }}:latest",
+              "Update": "true"
+            },
+            "Ports": [
+              {
+                "ContainerPort": 3000,
+                "HostPort": 3000
+              }
+            ],
+            "Environment": [
+              {
+                "Name": "DB_HOST",
+                "Value": "educloud-db.curk24uueenr.us-east-1.rds.amazonaws.com"
+              },
+              {
+                "Name": "DB_PASSWORD",
+                "Value": "1234abcd"
+              },
+              {
+                "Name": "DB_USER",
+                "Value": "postgres"
+              },
+              {
+                "Name": "DB_NAME",
+                "Value": "postgres"
+              },
+              {
+                "Name": "DB_PORT",
+                "Value": "5432"
+              }
+            ]
+          }
+          EOF
+
+      - name: Create ZIP file
+        run: zip deploy.zip Dockerrun.aws.json
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp deploy.zip s3://elasticbeanstalk-us-east-1-${{ env.AWS_ACCOUNT_ID }}/deploy-$(date +%Y%m%d%H%M%S).zip
+
+      - name: Create new application version
+        run: |
+          VERSION_LABEL="deploy-$(date +%Y%m%d%H%M%S)"
+          aws elasticbeanstalk create-application-version \
+            --application-name educloud-backend \
+            --version-label $VERSION_LABEL \
+            --source-bundle S3Bucket=elasticbeanstalk-us-east-1-${{ env.AWS_ACCOUNT_ID }},S3Key=deploy-$(date +%Y%m%d%H%M%S).zip
+
+      - name: Update environment
+        run: |
+          VERSION_LABEL="deploy-$(date +%Y%m%d%H%M%S)"
+          aws elasticbeanstalk update-environment \
+            --environment-name educloud-backend-env \
+            --version-label $VERSION_LABEL
