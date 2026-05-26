@@ -1,0 +1,35 @@
+﻿{
+  "AWSEBDockerrunVersion": "1",
+  "Image": {
+    "Name": "355947669793.dkr.ecr.us-east-1.amazonaws.com/educloud-backend:latest",
+    "Update": "true"
+  },
+  "Ports": [
+    {
+      "ContainerPort": 3000,
+      "HostPort": 3000
+    }
+  ],
+  "Environment": [
+    {
+      "Name": "DB_HOST",
+      "Value": "educloud-db.curk24uueenr.us-east-1.rds.amazonaws.com"
+    },
+    {
+      "Name": "DB_PASSWORD",
+      "Value": "1234abcd"
+    },
+    {
+      "Name": "DB_USER",
+      "Value": "postgres"
+    },
+    {
+      "Name": "DB_NAME",
+      "Value": "postgres"
+    },
+    {
+      "Name": "DB_PORT",
+      "Value": "5432"
+    }
+  ]
+}
