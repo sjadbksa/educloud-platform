@@ -1,0 +1,16 @@
+services:
+  backend:
+    build: ./educloud-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=educloud-db.curk24uueenr.us-east-1.rds.amazonaws.com
+      - DB_PASSWORD=1234abcd
+      - DB_USER=postgres
+      - DB_NAME=postgres
+      - DB_PORT=5432
+      
+  frontend:
+    build: ./educloud-frontend
+    ports:
+      - "80:80"
