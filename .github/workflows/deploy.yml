@@ -40,7 +40,7 @@ jobs:
           docker build -t ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.FRONTEND_REPO }}:latest .
           docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.FRONTEND_REPO }}:latest
 
-  deploy:
+  restart:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
@@ -51,11 +51,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 🔍 Opcional: Listar entornos para verificar el nombre exacto
-      - name: List EB environments
-        run: aws elasticbeanstalk describe-environments --query 'Environments[*].EnvironmentName' --output table
-
       - name: Restart Elastic Beanstalk environment
         run: |
-          # Cambia "educloud-backend-env" por el nombre exacto de tu entorno (sin comillas)
           aws elasticbeanstalk restart-app-server --environment-name educloud-backend-env
