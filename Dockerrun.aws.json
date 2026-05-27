@@ -1,4 +1,4 @@
-﻿{
+{
   "AWSEBDockerrunVersion": "1",
   "Image": {
     "Name": "355947669793.dkr.ecr.us-east-1.amazonaws.com/educloud-backend:latest",

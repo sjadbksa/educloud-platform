@@ -1,5 +1,8 @@
 import { useState } from "react";
 
+// 👇 URL de tu backend en Elastic Beanstalk
+const API_BASE_URL = "http://educloud-backend-env.eba-n36abckx.us-east-1.elasticbeanstalk.com";
+
 function App() {
   const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
@@ -11,7 +14,7 @@ function App() {
 
   const iniciarSesion = async () => {
     try {
-      const response = await fetch("http://localhost:3000/login", {
+      const response = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usuario, password }),
@@ -38,7 +41,7 @@ function App() {
     formData.append("archivo", archivo);
 
     try {
-      const response = await fetch("http://localhost:3000/upload", {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
         body: formData,
       });
