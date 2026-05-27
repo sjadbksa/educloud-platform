@@ -4,19 +4,23 @@ const { Pool } = require("pg");
 const multer = require("multer");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
+const express = require("express");
+const cors = require("cors");
+// ... otros imports
+
 const app = express();
 
 // Configuración CORS amplia (permite cualquier origen y métodos)
 app.use(cors({
-  origin: '*',           // Permite cualquier origen (para pruebas)
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Manejo explícito de preflight (OPTIONS)
-app.options('*', cors());
+// NO necesitas app.options('*', cors());  // <--- ELIMINA ESTA LÍNEA
 
 app.use(express.json());
+
 
 // RDS connection
 const pool = new Pool({
