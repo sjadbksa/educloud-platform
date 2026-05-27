@@ -6,7 +6,16 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
 const app = express();
 
-app.use(cors());
+// Configuración CORS amplia (permite cualquier origen y métodos)
+app.use(cors({
+  origin: '*',           // Permite cualquier origen (para pruebas)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Manejo explícito de preflight (OPTIONS)
+app.options('*', cors());
+
 app.use(express.json());
 
 // RDS connection
@@ -17,11 +26,18 @@ const pool = new Pool({
   password: "1234abcd",
   port: 5432,
   ssl: { rejectUnauthorized: false },
+  // Aumentar timeout para evitar 504 en conexiones lentas
+  connectionTimeoutMillis: 10000,
 });
 
 // S3 client
 const s3 = new S3Client({ region: "us-east-1" });
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Endpoint de salud (para diagnosticar)
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
+});
 
 // Root endpoint
 app.get("/", (req, res) => {
@@ -46,7 +62,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Test DB
+// Test DB (para verificar conexión a RDS)
 app.get("/test-db", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW()");
@@ -55,7 +71,9 @@ app.get("/test-db", async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
 app.get("/ping", (req, res) => res.json({ pong: true }));
+
 // Upload endpoint
 app.post("/upload", upload.single("archivo"), async (req, res) => {
   try {
@@ -86,11 +104,10 @@ app.post("/upload", upload.single("archivo"), async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
 app.get("/check-db", async (req, res) => {
   try {
-    // Verificar conexión
     const now = await pool.query("SELECT NOW()");
-    // Verificar si la tabla usuarios existe
     const tableCheck = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -112,9 +129,9 @@ app.get("/check-db", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 app.get("/setup", async (req, res) => {
   try {
-    // Crear tabla con columna 'username' (no 'usuario')
     await pool.query(`
       CREATE TABLE IF NOT EXISTS usuarios (
         id SERIAL PRIMARY KEY,
@@ -122,7 +139,6 @@ app.get("/setup", async (req, res) => {
         password VARCHAR(50) NOT NULL
       )
     `);
-    // Insertar admin si no existe
     await pool.query(`
       INSERT INTO usuarios (username, password)
       SELECT 'admin', '1234'
@@ -135,6 +151,7 @@ app.get("/setup", async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
 // Start server
 app.listen(3000, () => {
   console.log("Servidor backend corriendo en puerto 3000");
